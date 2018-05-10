@@ -6,7 +6,6 @@ from telegram.ext import MessageHandler as MSG
 from telegram.ext import Filters
 
 import json
-import os
 import logging
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -22,9 +21,6 @@ UPD = Updater(token=TOKEN)
 DIS = UPD.dispatcher
 
 
-#Allowed chars set
-allowed_chars = set("0123456789,.*+-/")
-
 #Dumped dictionary. Has another dict for each chat ID + a generic fallback one.
 chatData = {
     "generic": {
@@ -34,36 +30,78 @@ chatData = {
         }
         }
 
+overwriteDB = False
 
-def inicio(bot, update):
+
+def inicio():
+    global chatData
+
     try:
         with open("DB.json", "r") as db:
             chatData = json.load(db)
-            bot.send_message(chat_id=update.message.chat_id, text="Encontrada base de datos. Cargando.    ")
     except:
         print("El archivo DB no existe.")
 
 
 def setup(bot, update):
-
+    global overwriteDB
+    global chatData
     chat_id = update.message.chat_id
     admin = update.message.from_user.username
 
-    #Filling in the data to be dumped
-    chatData[str(chat_id)] = {
-        "admins": "RREDesigns, " + str(admin) + ", ",
-        "saludo": "Hola ",
-        "bienvenida": "Bienvenido/a al grupo!"
-        }
+    #Check wether the setup for this chat has been used already
+    if str(chat_id) in chatData.keys() and not overwriteDB:
+        bot.send_message(chat_id=chat_id, text="""Ya existen datos guardados para este chat.Si desea sobreescribir los datos, use el comando 'reset' y ejecute el setup nuevamente.""", disable_notification=True)
 
-    with open("DB.json", "w") as db:
-        json.dump(chatData, db)
+    elif str(chat_id) in chatData.keys() and overwriteDB and admin in chatData[str(chat_id)]["admins"]:
+        #Filling in the data to be dumped
+        chatData[str(chat_id)] = {
+                                    "admins": "RREDesigns, " + str(admin) + ", ",
+                                    "saludo": "Hola ",
+                                    "bienvenida": "Bienvenido/a al grupo!"
+                             }
 
-    bot.send_message(chat_id=update.message.chat_id, text="Se ha guardado la configuración básica.")
+        with open("DB.json", "w") as db:
+            json.dump(chatData, db)
 
+        bot.send_message(chat_id=update.message.chat_id, text="Se ha guardado la configuración básica.", disable_notification=True)
+        overwriteDB = False
+
+    elif str(chat_id) in chatData.keys() and overwriteDB and admin not in chatData[str(chat_id)]["admins"]:
+        bot.send_message(chat_id=chat_id, text="Solo un usuario habilitado puede ejecutar esta acción", disable_notification=True)
+
+    elif str(chat_id) not in chatData.keys():
+        #Filling in the data to be dumped
+        chatData[str(chat_id)] = {
+                                    "admins": "RREDesigns, " + str(admin) + ", ",
+                                    "saludo": "Hola ",
+                                    "bienvenida": "Bienvenido/a al grupo!"
+                                    }
+
+        with open("DB.json", "w") as db:
+            json.dump(chatData, db)
+
+        bot.send_message(chat_id=update.message.chat_id, text="Se ha guardado la configuración básica.", disable_notification=True)
+        overwriteDB = False
+
+    else:
+        bot.send_message(chat_id=chat_id, text="Hubo un error en el setup.", disable_notification=True)
+
+
+def reset(bot, update):
+    global overwriteDB
+    chat_id = update.message.chat_id
+    admin = update.message.from_user.username
+
+    if admin in chatData[str(chat_id)]["admins"]:
+        overwriteDB = True
+        bot.send_message(chat_id=chat_id, text="Ahora puede usar el setup.", disable_notification=True)
+    else:
+        bot.send_message(chat_id=chat_id, text="Solo usuarios habilitados pueden resetear los datos.", disable_notification=True)
 
 
 def parsing(bot, update):
+    global chatData
     msgEnts = update.message.parse_entities()
     chat_id = update.message.chat_id
 
@@ -74,15 +112,16 @@ def parsing(bot, update):
             print(chatData[str(chat_id)])
             if msgEnts[key] in chatData[str(chat_id)].keys():
                 print("Perfil encontrado")
-                bot.send_message(chat_id=update.message.chat_id, text="Recuperando perfil de " + msgEnts[key])
+                bot.send_message(chat_id=update.message.chat_id, text="Recuperando perfil de " + msgEnts[key], disable_notification=True)
                 name = "#" + msgEnts[key][1:]
-                bot.send_message(chat_id=update.message.chat_id, text=chatData[str(chat_id)][name])
+                bot.send_message(chat_id=update.message.chat_id, text=chatData[str(chat_id)][name], disable_notification=True)
             else:
                 print("Hubo un error al recuperar el perfil desde la DB.")
                 print(chatData)
 
 
 def perfil(bot, update):
+    global chatData
 
     ents = update.message.parse_entities()
     chat_id = update.message.chat_id
@@ -93,11 +132,11 @@ def perfil(bot, update):
 
                 try:
                     chatData[str(chat_id)]["#" + ents[key][1:]] = update.message.text[(key.length + 9):]
-                    bot.send_message(chat_id=update.message.chat_id, text="El perfil de " + ents[key][1:] + " se ha guardado con éxito.")
+                    bot.send_message(chat_id=update.message.chat_id, text="El perfil de " + ents[key][1:] + " se ha guardado con éxito.", disable_notification=True)
                 except:
-                    bot.send_message(chat_id=update.message.chat_id, text="Hubo un error al guardar el perfil de " + ents[key][1:] + ".")
+                    bot.send_message(chat_id=update.message.chat_id, text="Hubo un error al guardar el perfil de " + ents[key][1:] + ".", disable_notification=True)
     else:
-        bot.send_message(chat_id=update.message.chat_id, text="Sólo los usuarios habilitados pueden agregar perfiles.")
+        bot.send_message(chat_id=update.message.chat_id, text="Sólo los usuarios habilitados pueden agregar perfiles.", disable_notification=True)
 
     with open("DB.json", "w") as db:
         json.dump(chatData, db)
@@ -109,14 +148,14 @@ def bienvenida(bot, update):
 
     saludo = chatData[str(chat_id)]["saludo"] + name + ". " + chatData[str(chat_id)]["bienvenida"]
 
-    bot.send_message(chat_id=update.message.chat_id, text=saludo)
+    bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
 
 
 def bienvenidaTest(bot, update):
     chat_id = update.messsage.chat_id
     saludo = chatData[str(chat_id)]["saludo"] + "@user. " + chatData[str(chat_id)]["bienvenida"]
 
-    bot.send_message(chat_id=update.message.chat_id, text=saludo)
+    bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
 
 
 def cambiarTextoDeBienvenida(bot, update, args):
@@ -124,17 +163,17 @@ def cambiarTextoDeBienvenida(bot, update, args):
 
     if update.message.user.username in chatData[chat_id]["admins"]:
         chatData[str(chat_id)]["bienvenida"] = " ".join(args)
-        bot.send_message(chat_id=update.message.chat_id, text="Mensaje de bienvenida cambiado.")
+        bot.send_message(chat_id=update.message.chat_id, text="Mensaje de bienvenida cambiado.", disable_notification=True)
     else:
-        bot.send_message(chat_id=update.message.chat_id, text="Solo los usuarios habilitados pueden cambiar el mensaje de bienvenida.")
+        bot.send_message(chat_id=update.message.chat_id, text="Solo los usuarios habilitados pueden cambiar el mensaje de bienvenida.", disable_notification=True)
 
 
 def calc(bot, update):
     if not set('[abcdefghijklmnopzABCDEFGHIJKLMNOZ~!@#$%^&()_{}":;\']$').intersection(update.message.text[5:]):
         result = eval(update.message.text[5:])
-        bot.send_message(chat_id=update.message.chat_id, text=result)
+        bot.send_message(chat_id=update.message.chat_id, text=result, disable_notification=True)
     else:
-        bot.send_message(chat_id=update.message.chat_id, text="Hay caracteres no válidos en la operación solicitada.")
+        bot.send_message(chat_id=update.message.chat_id, text="Hay caracteres no válidos en la operación solicitada.", disable_notification=True)
         print(set('[abcdefghijklmnopzABCDEFGHIJKLMNOZ~!@#$%^&()_{}":;\']$').intersection(update.message.text[4:]))
 
 
@@ -146,9 +185,10 @@ DIS.add_handler(CMD("bienvenidaTest", bienvenidaTest))
 DIS.add_handler(CMD("calc", calc))
 DIS.add_handler(CMD("inicio", inicio))
 DIS.add_handler(CMD("setup", setup))
+DIS.add_handler(CMD("reset", reset))
 
 DIS.add_handler(MSG(Filters.status_update.new_chat_members, bienvenida))
 DIS.add_handler(MSG(Filters.all, parsing))
 
-
+inicio()
 UPD.start_polling()
