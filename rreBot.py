@@ -12,7 +12,13 @@ import logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 
-UPD = Updater(token="586949025:AAF_OTtaxw58s4QCRkwMqS9kLx1bESVHAos")
+#Bot token key pickup
+TOKEN = ""
+with open("bot.key", "r") as tokenFile:
+    TOKEN = tokenFile.read()
+
+
+UPD = Updater(token=TOKEN)
 DIS = UPD.dispatcher
 
 
