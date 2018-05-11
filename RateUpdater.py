@@ -4,19 +4,15 @@ import requests
 
 class RateUpdater():
 
-    def __init__(self, sistema):
-        self.sistema = sistema
-
-        if self.sistema == "BTC":
-            self.actualizarBTC()
-        elif self.sistema == "DIV":
-            self.actualizarDivisas()
+    def __init__(self):
+        #No initialization required
+        pass
 
     def actualizarBTC(self):
         response = requests.get("https://localbitcoins.com/bitcoinaverage/ticker-all-currencies/")
         json = response.json()
 
-        data = [json["VEF"]]
+        data = [json["VEF"], json["USD"], json["EUR"]]
 
         return data
 
