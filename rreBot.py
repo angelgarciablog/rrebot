@@ -117,7 +117,6 @@ def parsing(bot, update):
                 bot.send_message(chat_id=update.message.chat_id, text=chatData[str(chat_id)][name], disable_notification=True)
             else:
                 print("Hubo un error al recuperar el perfil desde la DB.")
-                print(chatData)
 
 
 def perfil(bot, update):
@@ -144,7 +143,7 @@ def perfil(bot, update):
 
 def bienvenida(bot, update):
     name = update.message.new_chat_members[0].first_name
-    chat_id = update.messsage.chat_id
+    chat_id = update.message.chat_id
 
     saludo = chatData[str(chat_id)]["saludo"] + name + ". " + chatData[str(chat_id)]["bienvenida"]
 
@@ -152,16 +151,16 @@ def bienvenida(bot, update):
 
 
 def bienvenidaTest(bot, update):
-    chat_id = update.messsage.chat_id
+    chat_id = update.message.chat_id
     saludo = chatData[str(chat_id)]["saludo"] + "@user. " + chatData[str(chat_id)]["bienvenida"]
 
     bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
 
 
 def cambiarTextoDeBienvenida(bot, update, args):
-    chat_id = update.messsage.chat_id
+    chat_id = update.message.chat_id
 
-    if update.message.user.username in chatData[chat_id]["admins"]:
+    if update.message.from_user.username in chatData[str(chat_id)]["admins"]:
         chatData[str(chat_id)]["bienvenida"] = " ".join(args)
         bot.send_message(chat_id=update.message.chat_id, text="Mensaje de bienvenida cambiado.", disable_notification=True)
     else:
