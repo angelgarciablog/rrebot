@@ -26,7 +26,7 @@ class RateUpdater():
         data = eval(response.text[17:])
 
         diccionario = {
-            "FECHA": data["fecha"],
+            "FECHA": data["_timestamp"]["fecha"],
             "USD": data["USD"],
             "EUR": data["EUR"]
             }
