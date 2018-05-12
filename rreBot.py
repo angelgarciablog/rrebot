@@ -12,6 +12,7 @@ from RateUpdater import *
 
 import json
 import logging
+import sys
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -59,7 +60,7 @@ def inicio():
 def setup(bot, update):
     global overwriteDB
     global chatData
-    chat_id = update.message.chat_id
+    chat_id = str(update.message.chat_id)
     admin = update.message.from_user.username
 
     #Check wether the setup for this chat has been used already
@@ -103,7 +104,7 @@ def setup(bot, update):
 
 def reset(bot, update):
     global overwriteDB
-    chat_id = update.message.chat_id
+    chat_id = str(update.message.chat_id)
     admin = update.message.from_user.username
 
     if admin in chatData[str(chat_id)]["admins"]:
@@ -116,44 +117,55 @@ def reset(bot, update):
 def parsing(bot, update):
     global chatData
     msgEnts = update.message.parse_entities()
-    chat_id = update.message.chat_id
+    chat_id = str(update.message.chat_id)
 
 #Hashtag parsing
-    for key in msgEnts:
-        if key.type == "hashtag":
-            if msgEnts[key] in chatData[str(chat_id)].keys():
-                bot.send_message(chat_id=update.message.chat_id, text="Recuperando perfil de " + msgEnts[key], disable_notification=True)
-                name = "#" + msgEnts[key][1:]
-                bot.send_message(chat_id=update.message.chat_id, text=chatData[str(chat_id)][name], disable_notification=True)
-            else:
-                print("No existe un perfil para este usuario en la base de datos de este chat, o hubo un error recuperando el perfil.")
+    if chat_id in chatData.keys():
+        for key in msgEnts:
+            if key.type == "hashtag":
+                if msgEnts[key] in chatData[str(chat_id)].keys():
+                    bot.send_message(chat_id=update.message.chat_id, text="Recuperando perfil de " + msgEnts[key], disable_notification=True)
+                    name = "#" + msgEnts[key][1:]
+                    bot.send_message(chat_id=update.message.chat_id, text=chatData[str(chat_id)][name], disable_notification=True)
+                else:
+                    print("No existe un perfil para este usuario en la base de datos de este chat, o hubo un error recuperando el perfil.")
+
+    else:
+        print("No hay una sesión guardada para este chat en la base de datos.")
 
 
 def perfil(bot, update):
     global chatData
 
     ents = update.message.parse_entities()
-    chat_id = update.message.chat_id
+    chat_id = str(update.message.chat_id)
 
-    if update.message.from_user.username in chatData[str(chat_id)]["admins"]:
-        for key in ents:
-            if key.type == "hashtag":
+    print(type(chat_id), chat_id, type(chatData.keys()[0]), chatData.keys())
+    #Check there's a session stored for this chat.
+    if chat_id in chatData.keys():
+        if update.message.from_user.username in chatData[str(chat_id)]["admins"]:
+            for key in ents:
+                if key.type == "hashtag":
 
-                try:
-                    chatData[str(chat_id)]["#" + ents[key][1:]] = update.message.text[(key.length + 9):]
-                    bot.send_message(chat_id=update.message.chat_id, text="El perfil de " + ents[key][1:] + " se ha guardado con éxito.", disable_notification=True)
-                except:
-                    bot.send_message(chat_id=update.message.chat_id, text="Hubo un error al guardar el perfil de " + ents[key][1:] + ".", disable_notification=True)
+                    try:
+                        chatData[str(chat_id)]["#" + ents[key][1:]] = update.message.text[(key.length + 9):]
+                        bot.send_message(chat_id=update.message.chat_id, text="El perfil de " + ents[key][1:] + " se ha guardado.", disable_notification=True)
+                    except:
+                        bot.send_message(chat_id=update.message.chat_id, text="Hubo un error al guardar el perfil de " + ents[key][1:] + ".", disable_notification=True)
+
+        else:
+            bot.send_message(chat_id=update.message.chat_id, text=("Sólo los usuarios habilitados pueden agregar perfiles.").decode("utf-8"), disable_notification=True)
+
+        with open("DB.json", "w") as db:
+            json.dump(chatData, db)
+
     else:
-        bot.send_message(chat_id=update.message.chat_id, text="Sólo los usuarios habilitados pueden agregar perfiles.", disable_notification=True)
-
-    with open("DB.json", "w") as db:
-        json.dump(chatData, db)
+        bot.send_message(chat_id=chat_id, text=("No hay una sesión guardada para este chat. Use el comando setup para comenzar a guardar perfiles de forma permanente.").decode("utf-8"))
 
 
 def bienvenida(bot, update):
     name = update.message.new_chat_members[0].first_name
-    chat_id = update.message.chat_id
+    chat_id = str(update.message.chat_id)
 
     saludo = chatData[str(chat_id)]["saludo"] + name + ". " + chatData[str(chat_id)]["bienvenida"]
 
@@ -161,14 +173,14 @@ def bienvenida(bot, update):
 
 
 def bienvenidaTest(bot, update):
-    chat_id = update.message.chat_id
+    chat_id = str(update.message.chat_id)
     saludo = chatData[str(chat_id)]["saludo"] + "@user. " + chatData[str(chat_id)]["bienvenida"]
 
     bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
 
 
 def cambiarTextoDeBienvenida(bot, update, args):
-    chat_id = update.message.chat_id
+    chat_id = str(update.message.chat_id)
 
     if update.message.from_user.username in chatData[str(chat_id)]["admins"]:
         chatData[str(chat_id)]["bienvenida"] = " ".join(args)
@@ -188,7 +200,7 @@ def calc(bot, update):
 def actualizarTasas(bot, update, args):
     global FECHA
     global FECHABTC
-    chat_id = update.message.chat_id
+    chat_id = str(update.message.chat_id)
 
     #Updater instance
     U = RateUpdater()
@@ -198,6 +210,7 @@ def actualizarTasas(bot, update, args):
     if "btc" in args or "bitcoin" in args or "usd" in args or "dolar" in args or "euro" in args or "tasas" in args or "eur" in args:
         try:
             btc = U.actualizarBTC()
+
             #Returns a list with dicts in it, in this order: 0-VEF, 1-USD, 2-EUR
             BTC["VEF"] = btc[0]
             BTC["USD"] = btc[1]
@@ -233,39 +246,43 @@ def actualizarTasas(bot, update, args):
             bot.send_message(chat_id=chat_id, text="Hubo un error en la actualización.")
 
 def cotizacion(bot, update, args):
-    chat_id = update.message.chat_id
+    chat_id = str(update.message.chat_id)
     divisa = args
 
-    #Header of the rates msg
-    header = ".\n" + "            " + "*DOLAR TODAY*" + "        \n" + "    " + str(FECHA) + "\n\n\n"
+    if FECHA and USD and EUR and BTC:
+        #Header of the rates msg
+        header = ".\n" + "            " + "*DOLAR TODAY*" + "        \n" + "    " + str(FECHA) + "\n\n\n"
 
-    #Titles for money kind
-    titleUSD = "                    " + "*DOLAR:*" + "\n\n"
-    titleEUR = "                    " + "*EURO:*" + "\n\n"
+        #Titles for money kind
+        titleUSD = "                    " + "*DOLAR:*" + "\n\n"
+        titleEUR = "                    " + "*EURO:*" + "\n\n"
 
-    #Full msg build
-    mensajeUSD = header + titleUSD + "Transferencia:    " + "`" + str(USD["transferencia"]) + "`" + "\n\nEfectivo:                " + "`" + str(USD["efectivo"]) + "`" + "\n\nImplícito:               " + "`" + str(USD["implícito"]) + "`" + "\n\nDICOM:                  " + "`" + str(USD["dicom"]) + "`"
+        #Full msg build
+        mensajeUSD = header + titleUSD + "Transferencia:    " + "`" + str(USD["transferencia"]) + "`" + "\n\nEfectivo:               " + "`" + str(USD["efectivo"]) + "`" + "\n\nImplícito:              " + "`" + str(USD["implícito"]) + "`" + "\n\nDICOM:                 " + "`" + str(USD["dicom"]) + "`"
 
-    mensajeEUR = header + titleEUR + "Transferencia:    " + "`" + str(EUR["transferencia"]) + "`" + "\n\nEfectivo:                " + "`" + str(EUR["efectivo"]) + "`" + "\n\nImplícito:               " + "`" + str(EUR["implícito"]) + "`" + "\n\nDICOM:                  " + "`" + str(EUR["dicom"]) + "`"
+        mensajeEUR = header + titleEUR + "Transferencia:    " + "`" + str(EUR["transferencia"]) + "`" + "\n\nEfectivo:               " + "`" + str(EUR["efectivo"]) + "`" + "\n\nImplícito:              " + "`" + str(EUR["implícito"]) + "`" + "\n\nDICOM:                 " + "`" + str(EUR["dicom"]) + "`"
 
-    mensajeFULL = mensajeUSD + "\n\n\n\n" + titleEUR + "Transferencia:    " + "`" + str(EUR["transferencia"]) + "`" + "\n\nEfectivo:                " + "`" + str(EUR["efectivo"]) + "`" + "\n\nImplícito:               " + "`" + str(EUR["implícito"]) + "`" + "\n\nDICOM:                  " + "`" + str(EUR["dicom"]) + "`"
+        mensajeFULL = mensajeUSD + "\n\n\n\n" + titleEUR + "Transferencia:    " + "`" + str(EUR["transferencia"]) + "`" + "\n\nEfectivo:                " + "`" + str(EUR["efectivo"]) + "`" + "\n\nImplícito:              " + "`" + str(EUR["implícito"]) + "`" + "\n\nDICOM:                 " + "`" + str(EUR["dicom"]) + "`"
 
-    #BTC message
-    headerBTC = ".\n" + "                        " + "*LOCAL BITCOINS*" + "        \n" + "            " + str(FECHABTC) + "\n\n\n"
-    bodyBTC = "*Promedio última hora: Bs.* " + "`" +str(BTC["VEF"]["avg_1h"]) + "`" + "\n\n" + "*$1 = Btc. *" + "`" + str(BTC["USD"]["avg_1h"]) + "`" + "\n\n" + "*€1 = Btc. *" + "`" + str(BTC["EUR"]["avg_1h"]) + "`"
+        #BTC message
+        headerBTC = ".\n" + "                        " + "*LOCAL BITCOINS*" + "        \n" + "            " + str(FECHABTC) + "\n\n\n"
+        bodyBTC = "*Promedio última hora: Bs.* " + "`" +str(BTC["VEF"]["avg_1h"]) + "`" + "\n\n" + "*$1 = Btc. *" + "`" + str(BTC["USD"]["avg_1h"]) + "`" + "\n\n" + "*€1 = Btc. *" + "`" + str(BTC["EUR"]["avg_1h"]) + "`"
 
-    #BTC message build
-    mensajeFULLBTC = headerBTC + bodyBTC
+        #BTC message build
+        mensajeFULLBTC = headerBTC + bodyBTC
 
-    if "USD" in divisa or "usd" in divisa or "dolar" in divisa:
-        bot.send_message(chat_id=chat_id, text=mensajeUSD, parse_mode="Markdown")
+        if "USD" in divisa or "usd" in divisa or "dolar" in divisa:
+            bot.send_message(chat_id=chat_id, text=mensajeUSD, parse_mode="Markdown")
 
-    elif "EUR" in divisa or "eur" in divisa or "euro" in divisa:
-        bot.send_message(chat_id=chat_id, text=mensajeEUR, parse_mode="Markdown")
-    elif "BTC" in divisa or "btc" in divisa or "bitcoin" in divisa:
-        bot.send_message(chat_id=chat_id, text=mensajeFULLBTC, parse_mode="Markdown")
-    elif not args:
-        bot.send_message(chat_id=chat_id, text=mensajeFULL, parse_mode="Markdown")
+        elif "EUR" in divisa or "eur" in divisa or "euro" in divisa:
+            bot.send_message(chat_id=chat_id, text=mensajeEUR, parse_mode="Markdown")
+        elif "BTC" in divisa or "btc" in divisa or "bitcoin" in divisa:
+            bot.send_message(chat_id=chat_id, text=mensajeFULLBTC, parse_mode="Markdown")
+        elif not args:
+            bot.send_message(chat_id=chat_id, text=mensajeFULL, parse_mode="Markdown")
+
+    else:
+        bot.send_message(chat_id=chat_id, text="No hay valores recientes guardados. Use el comando 'actualizar' para descargar cotizaciones.")
 
 
 #Passing handlers to the dispatcher
