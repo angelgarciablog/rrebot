@@ -12,7 +12,6 @@ from RateUpdater import *
 
 import json
 import logging
-import sys
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -164,14 +163,16 @@ def perfil(bot, update):
 
 
 def bienvenida(bot, update):
-    name = update.message.new_chat_members[0].first_name
+    #name = update.message.new_chat_members[0].first_name
     chat_id = str(update.message.chat_id)
 
     #Checking if there's a stored session
     if chat_id in chatData.keys():
-        saludo = chatData[str(chat_id)]["saludo"] + name + ". " + chatData[str(chat_id)]["bienvenida"]
+        #Greeting every new chat member
+        for newMember in update.message.new_chat_members:
+            saludo = chatData[str(chat_id)]["saludo"] + newMember.first_name + ". " + chatData[str(chat_id)]["bienvenida"]
 
-        bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
+            bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
 
     else:
         saludo = chatData["generic"]["saludo"] + name + ". " + chatData["generic"]["bienvenida"]
@@ -289,7 +290,7 @@ def cotizacion(bot, update, args):
 
         #BTC message
         headerBTC = ".\n" + "                        " + "*LOCAL BITCOINS*" + "        \n" + "            " + str(FECHABTC) + "\n\n\n"
-        bodyBTC = "*Promedio última hora: Bs.* " + "`" +str(BTC["VEF"]["avg_1h"]) + "`" + "\n\n" + "*$1 = Btc. *" + "`" + str(BTC["USD"]["avg_1h"]) + "`" + "\n\n" + "*€1 = Btc. *" + "`" + str(BTC["EUR"]["avg_1h"]) + "`"
+        bodyBTC = "*Promedio 12hs: Bs.* " + "`" +str(BTC["VEF"]["avg_12h"]) + "`" + "\n\n" + "*$1 = Btc. *" + "`" + str(BTC["USD"]["avg_12h"]) + "`" + "\n\n" + "*€1 = Btc. *" + "`" + str(BTC["EUR"]["avg_12h"]) + "`"
 
         #BTC message build
         mensajeFULLBTC = headerBTC + bodyBTC
