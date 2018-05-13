@@ -54,7 +54,7 @@ def inicio():
         with open("DB.json", "r") as db:
             chatData = json.load(db)
     except:
-        print("El archivo DB no existe.")
+        pass
 
 
 def setup(bot, update):
@@ -128,10 +128,10 @@ def parsing(bot, update):
                     name = "#" + msgEnts[key][1:]
                     bot.send_message(chat_id=update.message.chat_id, text=chatData[str(chat_id)][name], disable_notification=True)
                 else:
-                    print("No existe un perfil para este usuario en la base de datos de este chat, o hubo un error recuperando el perfil.")
+                    pass
 
     else:
-        print("No hay una sesión guardada para este chat en la base de datos.")
+        pass
 
 
 def perfil(bot, update):
@@ -140,9 +140,9 @@ def perfil(bot, update):
     ents = update.message.parse_entities()
     chat_id = str(update.message.chat_id)
 
-    print(type(chat_id), chat_id, type(chatData.keys()[0]), chatData.keys())
     #Check there's a session stored for this chat.
     if chat_id in chatData.keys():
+        #If there's one:
         if update.message.from_user.username in chatData[str(chat_id)]["admins"]:
             for key in ents:
                 if key.type == "hashtag":
@@ -167,26 +167,46 @@ def bienvenida(bot, update):
     name = update.message.new_chat_members[0].first_name
     chat_id = str(update.message.chat_id)
 
-    saludo = chatData[str(chat_id)]["saludo"] + name + ". " + chatData[str(chat_id)]["bienvenida"]
+    #Checking if there's a stored session
+    if chat_id in chatData.keys():
+        saludo = chatData[str(chat_id)]["saludo"] + name + ". " + chatData[str(chat_id)]["bienvenida"]
 
-    bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
+        bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
+
+    else:
+        saludo = chatData["generic"]["saludo"] + name + ". " + chatData["generic"]["bienvenida"]
+
+        bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
 
 
 def bienvenidaTest(bot, update):
     chat_id = str(update.message.chat_id)
-    saludo = chatData[str(chat_id)]["saludo"] + "@user. " + chatData[str(chat_id)]["bienvenida"]
 
-    bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
+    #Checking if there's a stored session
+    if chat_id in chatData.keys():
+        saludo = chatData[str(chat_id)]["saludo"] + "@user. " + chatData[str(chat_id)]["bienvenida"]
+
+        bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
+
+    else:
+        saludo = chatData["generic"]["saludo"] + name + ". " + chatData["generic"]["bienvenida"]
+
+        bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
 
 
 def cambiarTextoDeBienvenida(bot, update, args):
     chat_id = str(update.message.chat_id)
 
-    if update.message.from_user.username in chatData[str(chat_id)]["admins"]:
-        chatData[str(chat_id)]["bienvenida"] = " ".join(args)
-        bot.send_message(chat_id=update.message.chat_id, text="Mensaje de bienvenida cambiado.", disable_notification=True)
+    #Checking if there's a stored session
+    if chat_id in chatData.keys():
+        if update.message.from_user.username in chatData[str(chat_id)]["admins"]:
+            chatData[str(chat_id)]["bienvenida"] = " ".join(args)
+            bot.send_message(chat_id=update.message.chat_id, text="Mensaje de bienvenida cambiado.", disable_notification=True)
+        else:
+            bot.send_message(chat_id=update.message.chat_id, text="Solo los usuarios habilitados pueden cambiar el mensaje de bienvenida.", disable_notification=True)
+
     else:
-        bot.send_message(chat_id=update.message.chat_id, text="Solo los usuarios habilitados pueden cambiar el mensaje de bienvenida.", disable_notification=True)
+        bot.send_message(chat_id=chat_id, text=("No hay una sesión guardada para este chat. Use el comando setup para comenzar a guardar perfiles de forma permanente.").decode("utf-8"))
 
 
 def calc(bot, update):
@@ -205,7 +225,10 @@ def actualizarTasas(bot, update, args):
     #Updater instance
     U = RateUpdater()
 
-    bot.send_message(chat_id=chat_id, text="Consultando fuentes online. Por favor espere.")
+    if not args:
+        bot.send_message(chat_id=chat_id, text="Debe especificar un filtro (USD/EUR/BTC). O simplemente use `/actualizar tasas` para actualizar el valor de todas las monedas", parse_mode="Markdown")
+    else:
+        bot.send_message(chat_id=chat_id, text="Consultando fuentes online. Espere unos segundos por favor.")
 
     if "btc" in args or "bitcoin" in args or "usd" in args or "dolar" in args or "euro" in args or "tasas" in args or "eur" in args:
         try:
@@ -243,7 +266,7 @@ def actualizarTasas(bot, update, args):
             bot.send_message(chat_id=chat_id, text="Las cotizaciones de divisas internacionales se han actualizado.")
 
         except:
-            bot.send_message(chat_id=chat_id, text="Hubo un error en la actualización.")
+            bot.send_message(chat_id=chat_id, text="Hubo un error en el comando o en el proceso de actualización. Intente nuevamente.")
 
 def cotizacion(bot, update, args):
     chat_id = str(update.message.chat_id)

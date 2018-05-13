@@ -1,0 +1,18 @@
+2018-05-12 21:44:42,479 - telegram.ext.dispatcher - ERROR - An uncaught error was raised while processing the update
+Traceback (most recent call last):
+  File "/usr/lib/python2.7/site-packages/python_telegram_bot-10.1.0-py2.7.egg/telegram/ext/dispatcher.py", line 279, in process_update
+    handler.handle_update(update, self)
+  File "/usr/lib/python2.7/site-packages/python_telegram_bot-10.1.0-py2.7.egg/telegram/ext/messagehandler.py", line 169, in handle_update
+    return self.callback(dispatcher.bot, update, **optional_args)
+  File "rreBot.py", line 170, in bienvenida
+    saludo = chatData[str(chat_id)]["saludo"] + name + ". " + chatData[str(chat_id)]["bienvenida"]
+KeyError: '-316032738'
+2018-05-12 21:45:45,253 - telegram.ext.dispatcher - ERROR - An uncaught error was raised while processing the update
+Traceback (most recent call last):
+  File "/usr/lib/python2.7/site-packages/python_telegram_bot-10.1.0-py2.7.egg/telegram/ext/dispatcher.py", line 279, in process_update
+    handler.handle_update(update, self)
+  File "/usr/lib/python2.7/site-packages/python_telegram_bot-10.1.0-py2.7.egg/telegram/ext/messagehandler.py", line 169, in handle_update
+    return self.callback(dispatcher.bot, update, **optional_args)
+  File "rreBot.py", line 170, in bienvenida
+    saludo = chatData[str(chat_id)]["saludo"] + name + ". " + chatData[str(chat_id)]["bienvenida"]
+KeyError: '-316032738'
