@@ -118,6 +118,7 @@ def parsing(bot, update):
     msgEnts = update.message.parse_entities()
     chat_id = str(update.message.chat_id)
 
+
 #Hashtag parsing
     if chat_id in chatData.keys():
         for key in msgEnts:
@@ -131,7 +132,6 @@ def parsing(bot, update):
 
     else:
         pass
-
 
 def perfil(bot, update):
     global chatData
@@ -175,9 +175,10 @@ def bienvenida(bot, update):
             bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
 
     else:
-        saludo = chatData["generic"]["saludo"] + name + ". " + chatData["generic"]["bienvenida"]
+        for newMember in update.message.new_chat_members:
+            saludo = chatData["generic"]["saludo"] + newMember.first_name + ". " + chatData["generic"]["bienvenida"]
 
-        bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
+            bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
 
 
 def bienvenidaTest(bot, update):
@@ -190,9 +191,7 @@ def bienvenidaTest(bot, update):
         bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
 
     else:
-        saludo = chatData["generic"]["saludo"] + name + ". " + chatData["generic"]["bienvenida"]
-
-        bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
+        pass
 
 
 def cambiarTextoDeBienvenida(bot, update, args):
