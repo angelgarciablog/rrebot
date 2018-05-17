@@ -45,6 +45,9 @@ BTC = {}
 USD = {}
 EUR = {}
 
+#Tasa
+tasa = None
+
 
 def inicio():
     global chatData
@@ -123,6 +126,8 @@ def parsing(bot, update):
     if chat_id in chatData.keys():
         for key in msgEnts:
             if key.type == "hashtag":
+                if msgEnts[key] == "#tasa":
+                    mostrarTasa(bot, chat_id)
                 if msgEnts[key] in chatData[str(chat_id)].keys():
                     bot.send_message(chat_id=update.message.chat_id, text="Recuperando perfil de " + msgEnts[key], disable_notification=True)
                     name = "#" + msgEnts[key][1:]
@@ -308,6 +313,18 @@ def cotizacion(bot, update, args):
         bot.send_message(chat_id=chat_id, text="No hay valores recientes guardados. Use el comando 'actualizar' para descargar cotizaciones.")
 
 
+def tasa(bot, update):
+    global tasa
+    tasa = update.message.reply_to_message.photo[-1]["file_id"]
+    chat_id = update.message.chat_id
+
+    bot.send_message(chat_id=chat_id, text="Tasa AirTM guardada.")
+
+def mostrarTasa(bot, chat_id):
+    global tasa
+    bot.send_photo(chat_id=chat_id, photo=tasa)
+
+
 #Passing handlers to the dispatcher
 DIS.add_handler(CMD("perfil", perfil))
 DIS.add_handler(CMD("bienvenida", cambiarTextoDeBienvenida, pass_args=True))
@@ -318,6 +335,7 @@ DIS.add_handler(CMD("setup", setup))
 DIS.add_handler(CMD("reset", reset))
 DIS.add_handler(CMD("actualizar", actualizarTasas, pass_args=True))
 DIS.add_handler(CMD("cotizacion", cotizacion, pass_args=True))
+DIS.add_handler(CMD("tasa", tasa))
 
 DIS.add_handler(MSG(Filters.status_update.new_chat_members, bienvenida))
 DIS.add_handler(MSG(Filters.all, parsing))
