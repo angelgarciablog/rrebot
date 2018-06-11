@@ -47,6 +47,7 @@ EUR = {}
 
 #Tasa
 tasa = None
+isPhoto = False
 
 
 def inicio():
@@ -315,14 +316,27 @@ def cotizacion(bot, update, args):
 
 def tasa(bot, update):
     global tasa
-    tasa = update.message.reply_to_message.photo[-1]["file_id"]
+    global isPhoto
+
     chat_id = update.message.chat_id
+
+    if update.message.reply_to_message.photo:
+        tasa = update.message.reply_to_message.photo[-1]["file_id"]
+        isPhoto = True
+    else:
+        tasa = update.message.reply_to_message.text
+        isPhoto = False
 
     bot.send_message(chat_id=chat_id, text="Tasa AirTM guardada.")
 
 def mostrarTasa(bot, chat_id):
     global tasa
-    bot.send_photo(chat_id=chat_id, photo=tasa)
+    global isPhoto
+
+    if isPhoto:
+        bot.send_photo(chat_id=chat_id, photo=tasa)
+    else:
+        bot.send_message(chat_id=chat_id, text=tasa)
 
 
 #Passing handlers to the dispatcher
