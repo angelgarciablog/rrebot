@@ -23,6 +23,7 @@ with open("bot.key", "r") as tokenFile:
 
 
 UPD = Updater(token=TOKEN)
+JQ = UPD.job_queue
 DIS = UPD.dispatcher
 
 
@@ -109,18 +110,27 @@ def reset(bot, update):
     global overwriteDB
     chat_id = str(update.message.chat_id)
     admin = update.message.from_user.username
+    msgId = update.message.message_id
 
     if admin in chatData[str(chat_id)]["admins"]:
         overwriteDB = True
-        bot.send_message(chat_id=chat_id, text="Ahora puede usar el setup.", disable_notification=True)
+        msg = bot.send_message(chat_id=chat_id, text="Ahora puede usar el setup.", disable_notification=True)
+
+        # Queue for deletion
+        JQ.run_once(deleteMsg, 10, context=[chat_id, msg.message_id])
+        JQ.run_once(deleteMsg, 10, context=[chat_id, msgId])
     else:
-        bot.send_message(chat_id=chat_id, text="Solo usuarios habilitados pueden resetear los datos.", disable_notification=True)
+        msg = bot.send_message(chat_id=chat_id, text="Solo usuarios habilitados pueden resetear los datos.", disable_notification=True)
+
+        # Queue for deletion
+        JQ.run_once(deleteMsg, 10, context=[chat_id, msg.message_id])
 
 
 def parsing(bot, update):
     global chatData
     msgEnts = update.message.parse_entities()
     chat_id = str(update.message.chat_id)
+    msgId = update.message.message_id
 
 
 #Hashtag parsing
@@ -130,20 +140,33 @@ def parsing(bot, update):
                 if msgEnts[key] == "#tasa":
                     mostrarTasa(bot, chat_id)
                 if msgEnts[key] in chatData[str(chat_id)].keys():
-                    bot.send_message(chat_id=update.message.chat_id, text="Recuperando perfil de " + msgEnts[key], disable_notification=True)
+                    msg = bot.send_message(chat_id=update.message.chat_id, text="Recuperando perfil de " + msgEnts[key], disable_notification=True)
+
+                    # Queue for deletion
+                    JQ.run_once(deleteMsg, 60, context=[chat_id, msg.message_id])
+
                     name = "#" + msgEnts[key][1:]
-                    bot.send_message(chat_id=update.message.chat_id, text=chatData[str(chat_id)][name], disable_notification=True)
+                    msg = bot.send_message(chat_id=update.message.chat_id, text=chatData[str(chat_id)][name], disable_notification=True)
+
+                    # Queue for deletion
+                    JQ.run_once(deleteMsg, 60, context=[chat_id, msg.message_id])
+
                 else:
                     pass
 
     else:
         pass
 
+    # Queue for deletion
+    JQ.run_once(deleteMsg, 30, context=[chat_id, msgId])
+
+
 def perfil(bot, update):
     global chatData
 
     ents = update.message.parse_entities()
     chat_id = str(update.message.chat_id)
+    msgId = update.message.message_id
 
     #Check there's a session stored for this chat.
     if chat_id in chatData.keys():
@@ -154,18 +177,33 @@ def perfil(bot, update):
 
                     try:
                         chatData[str(chat_id)]["#" + ents[key][1:]] = update.message.text[(key.length + 9):]
-                        bot.send_message(chat_id=update.message.chat_id, text="El perfil de " + ents[key][1:] + " se ha guardado.", disable_notification=True)
+                        msg = bot.send_message(chat_id=update.message.chat_id, text="El perfil de " + ents[key][1:] + " se ha guardado.", disable_notification=True)
+
+                        # Queue for deletion
+                        JQ.run_once(deleteMsg, 30, context=[chat_id, msg.message_id])
                     except:
-                        bot.send_message(chat_id=update.message.chat_id, text="Hubo un error al guardar el perfil de " + ents[key][1:] + ".", disable_notification=True)
+                        msg = bot.send_message(chat_id=update.message.chat_id, text="Hubo un error al guardar el perfil de " + ents[key][1:] + ".", disable_notification=True)
+
+                        # Queue for deletion
+                        JQ.run_once(deleteMsg, 30, context=[chat_id, msg.message_id])
 
         else:
-            bot.send_message(chat_id=update.message.chat_id, text=("Sólo los usuarios habilitados pueden agregar perfiles.").decode("utf-8"), disable_notification=True)
+            msg = bot.send_message(chat_id=update.message.chat_id, text=("Sólo los usuarios habilitados pueden agregar perfiles.").decode("utf-8"), disable_notification=True)
+
+            # Queue for deletion
+            JQ.run_once(deleteMsg, 30, context=[chat_id, msg.message_id])
 
         with open("DB.json", "w") as db:
             json.dump(chatData, db)
 
     else:
-        bot.send_message(chat_id=chat_id, text=("No hay una sesión guardada para este chat. Use el comando setup para comenzar a guardar perfiles de forma permanente.").decode("utf-8"))
+        msg = bot.send_message(chat_id=chat_id, text=("No hay una sesión guardada para este chat. Use el comando setup para comenzar a guardar perfiles de forma permanente.").decode("utf-8"))
+
+        # Queue for deletion
+        JQ.run_once(deleteMsg, 30, context=[chat_id, msg.message_id])
+
+    # Queue for deletion
+    JQ.run_once(deleteMsg, 90, context=[chat_id, msgId])
 
 
 def bienvenida(bot, update):
@@ -178,63 +216,107 @@ def bienvenida(bot, update):
         for newMember in update.message.new_chat_members:
             saludo = chatData[str(chat_id)]["saludo"] + newMember.first_name + ". " + chatData[str(chat_id)]["bienvenida"]
 
-            bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
+            msg = bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
+
+            # Queue for deletion
+            JQ.run_once(deleteMsg, 30, context=[chat_id, msg.message_id])
 
     else:
         for newMember in update.message.new_chat_members:
             saludo = chatData["generic"]["saludo"] + newMember.first_name + ". " + chatData["generic"]["bienvenida"]
 
-            bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
+            msg = bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
+
+            # Queue for deletion
+            JQ.run_once(deleteMsg, 30, context=[chat_id, msg.message_id])
 
 
 def bienvenidaTest(bot, update):
     chat_id = str(update.message.chat_id)
+    msgId = update.message.message_id
 
     #Checking if there's a stored session
     if chat_id in chatData.keys():
         saludo = chatData[str(chat_id)]["saludo"] + "@user. " + chatData[str(chat_id)]["bienvenida"]
 
-        bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
+        msg = bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
+
+        # Queue for deletion
+        JQ.run_once(deleteMsg, 10, context=[chat_id, msg.message_id])
 
     else:
         pass
 
+    # Queue for deletion
+    JQ.run_once(deleteMsg, 5, context=[chat_id, msgId])
+
 
 def cambiarTextoDeBienvenida(bot, update, args):
     chat_id = str(update.message.chat_id)
+    msgId = update.message.message_id
 
     #Checking if there's a stored session
     if chat_id in chatData.keys():
         if update.message.from_user.username in chatData[str(chat_id)]["admins"]:
             chatData[str(chat_id)]["bienvenida"] = " ".join(args)
-            bot.send_message(chat_id=update.message.chat_id, text="Mensaje de bienvenida cambiado.", disable_notification=True)
+            msg = bot.send_message(chat_id=update.message.chat_id, text="Mensaje de bienvenida cambiado.", disable_notification=True)
+
+            # Queue for deletion
+            JQ.run_once(deleteMsg, 10, context=[chat_id, msg.message_id])
         else:
-            bot.send_message(chat_id=update.message.chat_id, text="Solo los usuarios habilitados pueden cambiar el mensaje de bienvenida.", disable_notification=True)
+            msg = bot.send_message(chat_id=update.message.chat_id, text="Solo los usuarios habilitados pueden cambiar el mensaje de bienvenida.", disable_notification=True)
+
+            # Queue for deletion
+            JQ.run_once(deleteMsg, 10, context=[chat_id, msg.message_id])
 
     else:
-        bot.send_message(chat_id=chat_id, text=("No hay una sesión guardada para este chat. Use el comando setup para comenzar a guardar perfiles de forma permanente.").decode("utf-8"))
+        msg = bot.send_message(chat_id=chat_id, text=("No hay una sesión guardada para este chat. Use el comando setup para comenzar a guardar perfiles de forma permanente.").decode("utf-8"))
+
+        # Queue for deletion
+        JQ.run_once(deleteMsg, 10, context=[chat_id, msg.message_id])
+
+    # Queue for deletion
+    JQ.run_once(deleteMsg, 20, context=[chat_id, msgId])
 
 
 def calc(bot, update):
+    chat_id = update.message.chat_id
+    msgId = update.message.message_id
+
     if not set('[abcdefghijklmnopzABCDEFGHIJKLMNOZ~!@#$%^&()_{}":;\']$').intersection(update.message.text[5:]):
         result = eval(update.message.text[5:])
-        bot.send_message(chat_id=update.message.chat_id, text=result, disable_notification=True)
+        msg = bot.send_message(chat_id=update.message.chat_id, text=result, disable_notification=True)
+
+        # Queue for deletion
+        JQ.run_once(deleteMsg, 30, context=[chat_id, msg.message_id])
     else:
-        bot.send_message(chat_id=update.message.chat_id, text="Hay caracteres no válidos en la operación solicitada.", disable_notification=True)
-        print(set('[abcdefghijklmnopzABCDEFGHIJKLMNOZ~!@#$%^&()_{}":;\']$').intersection(update.message.text[4:]))
+        msg = bot.send_message(chat_id=update.message.chat_id, text="Hay caracteres no válidos en la operación solicitada.", disable_notification=True)
+
+        # Queue for deletion
+        JQ.run_once(deleteMsg, 10, context=[chat_id, msg.message_id])
+
+    # Queue for deletion
+    JQ.run_once(deleteMsg, 30, context=[chat_id, msgId])
 
 def actualizarTasas(bot, update, args):
     global FECHA
     global FECHABTC
     chat_id = str(update.message.chat_id)
+    msgId = update.message.message_id
 
     #Updater instance
     U = RateUpdater()
 
     if not args:
-        bot.send_message(chat_id=chat_id, text="Debe especificar un filtro (USD/EUR/BTC). O simplemente use `/actualizar tasas` para actualizar el valor de todas las monedas", parse_mode="Markdown")
+        msg = bot.send_message(chat_id=chat_id, text="Debe especificar un filtro (USD/EUR/BTC). O simplemente use `/actualizar tasas` para actualizar el valor de todas las monedas", parse_mode="Markdown")
+
+        # Queue for deletion
+        JQ.run_once(deleteMsg, 10, context=[chat_id, msg.message_id])
     else:
-        bot.send_message(chat_id=chat_id, text="Consultando fuentes online. Espere unos segundos por favor.")
+        msg = bot.send_message(chat_id=chat_id, text="Consultando fuentes online. Espere unos segundos por favor.")
+
+        # Queue for deletion
+        JQ.run_once(deleteMsg, 10, context=[chat_id, msg.message_id])
 
     if "btc" in args or "bitcoin" in args or "usd" in args or "dolar" in args or "euro" in args or "tasas" in args or "eur" in args:
         try:
@@ -245,7 +327,10 @@ def actualizarTasas(bot, update, args):
             BTC["USD"] = btc[1]
             BTC["EUR"] = btc[2]
 
-            bot.send_message(chat_id=chat_id, text="Las cotizaciones de BTC se han actualizado.")
+            msg = bot.send_message(chat_id=chat_id, text="Las cotizaciones de BTC se han actualizado.")
+
+            # Queue for deletion
+            JQ.run_once(deleteMsg, 10, context=[chat_id, msg.message_id])
 
             FECHABTC = strftime("%d de %b de %Y.  %I:%M %p", gmtime())
 
@@ -269,13 +354,23 @@ def actualizarTasas(bot, update, args):
             EUR["implícito"] = "Bs. " + str(div["EUR"]["efectivo"])
             EUR["dicom"] = "Bs. " + str(div["EUR"]["sicad2"])
 
-            bot.send_message(chat_id=chat_id, text="Las cotizaciones de divisas internacionales se han actualizado.")
+            msg = bot.send_message(chat_id=chat_id, text="Las cotizaciones de divisas internacionales se han actualizado.")
+
+            # Queue for deletion
+            JQ.run_once(deleteMsg, 10, context=[chat_id, msg.message_id])
 
         except:
-            bot.send_message(chat_id=chat_id, text="Hubo un error en el comando o en el proceso de actualización. Intente nuevamente.")
+            msg = bot.send_message(chat_id=chat_id, text="Hubo un error en el comando o en el proceso de actualización. Intente nuevamente.")
+
+            # Queue for deletion
+            JQ.run_once(deleteMsg, 10, context=[chat_id, msg.message_id])
+
+    # Queue for deletion
+    JQ.run_once(deleteMsg, 10, context=[chat_id, msgId])
 
 def cotizacion(bot, update, args):
     chat_id = str(update.message.chat_id)
+    msgId = update.message.message_id
     divisa = args
 
     if FECHA and USD and EUR and BTC:
@@ -301,17 +396,37 @@ def cotizacion(bot, update, args):
         mensajeFULLBTC = headerBTC + bodyBTC
 
         if "USD" in divisa or "usd" in divisa or "dolar" in divisa:
-            bot.send_message(chat_id=chat_id, text=mensajeUSD, parse_mode="Markdown")
+            msg = bot.send_message(chat_id=chat_id, text=mensajeUSD, parse_mode="Markdown")
+
+            # Queue for deletion
+            JQ.run_once(deleteMsg, 20, context=[chat_id, msg.message_id])
 
         elif "EUR" in divisa or "eur" in divisa or "euro" in divisa:
-            bot.send_message(chat_id=chat_id, text=mensajeEUR, parse_mode="Markdown")
+            msg = bot.send_message(chat_id=chat_id, text=mensajeEUR, parse_mode="Markdown")
+
+            # Queue for deletion
+            JQ.run_once(deleteMsg, 20, context=[chat_id, msg.message_id])
+
         elif "BTC" in divisa or "btc" in divisa or "bitcoin" in divisa:
-            bot.send_message(chat_id=chat_id, text=mensajeFULLBTC, parse_mode="Markdown")
+            msg = bot.send_message(chat_id=chat_id, text=mensajeFULLBTC, parse_mode="Markdown")
+
+            # Queue for deletion
+            JQ.run_once(deleteMsg, 20, context=[chat_id, msg.message_id])
+
         elif not args:
-            bot.send_message(chat_id=chat_id, text=mensajeFULL, parse_mode="Markdown")
+            msg = bot.send_message(chat_id=chat_id, text=mensajeFULL, parse_mode="Markdown")
+
+            # Queue for deletion
+            JQ.run_once(deleteMsg, 20, context=[chat_id, msg.message_id])
 
     else:
-        bot.send_message(chat_id=chat_id, text="No hay valores recientes guardados. Use el comando 'actualizar' para descargar cotizaciones.")
+        msg = bot.send_message(chat_id=chat_id, text="No hay valores recientes guardados. Use el comando 'actualizar' para descargar cotizaciones.")
+
+        # Queue for deletion
+        JQ.run_once(deleteMsg, 20, context=[chat_id, msg.message_id])
+
+    # Queue for deletion
+    JQ.run_once(deleteMsg, 20, context=[chat_id, msgId])
 
 
 def tasa(bot, update):
@@ -319,6 +434,7 @@ def tasa(bot, update):
     global isPhoto
 
     chat_id = update.message.chat_id
+    msgId = update.message.message_id
 
     if update.message.reply_to_message.photo:
         tasa = update.message.reply_to_message.photo[-1]["file_id"]
@@ -327,16 +443,36 @@ def tasa(bot, update):
         tasa = update.message.reply_to_message.text
         isPhoto = False
 
-    bot.send_message(chat_id=chat_id, text="Tasa AirTM guardada.")
+    msg = bot.send_message(chat_id=chat_id, text="Tasa AirTM guardada.")
+
+    # Queue for deletion
+    JQ.run_once(deleteMsg, 10, context=[chat_id, msg.message_id])
+    JQ.run_once(deleteMsg, 10, context=[chat_id, msgId])
 
 def mostrarTasa(bot, chat_id):
     global tasa
     global isPhoto
 
+    chat_id = update.message.chat_id
+    msgId = update.message.message_id
+
     if isPhoto:
-        bot.send_photo(chat_id=chat_id, photo=tasa)
+        msg = bot.send_photo(chat_id=chat_id, photo=tasa)
+
+        # Queue for deletion
+        JQ.run_once(deleteMsg, 20, context=[chat_id, msg.message_id])
     else:
-        bot.send_message(chat_id=chat_id, text=tasa)
+        msg = bot.send_message(chat_id=chat_id, text=tasa)
+
+        # Queue for deletion
+        JQ.run_once(deleteMsg, 20, context=[chat_id, msg.message_id])
+
+    # Queue for deletion
+    JQ.run_once(deleteMsg, 5, context=[chat_id, msgId])
+
+def deleteMsg(bot,job):
+
+    bot.delete_message(chat_id=job.context[0], message_id=job.context[1])
 
 
 #Passing handlers to the dispatcher
