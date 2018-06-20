@@ -139,6 +139,10 @@ def parsing(bot, update):
             if key.type == "hashtag":
                 if msgEnts[key] == "#tasa":
                     mostrarTasa(bot, chat_id, msgId)
+
+                    # Queue for deletion
+                    JQ.run_once(deleteMsg, 30, context=[chat_id, msgId])
+                    JQ.run_once(deleteMsg, 10, context=[chat_id, msg.message_id])
                 if msgEnts[key] in chatData[str(chat_id)].keys():
                     msg = bot.send_message(chat_id=update.message.chat_id, text="Recuperando perfil de " + msgEnts[key], disable_notification=True)
 
@@ -156,9 +160,6 @@ def parsing(bot, update):
 
     else:
         pass
-
-    # Queue for deletion
-    JQ.run_once(deleteMsg, 30, context=[chat_id, msgId])
 
 
 def perfil(bot, update):
