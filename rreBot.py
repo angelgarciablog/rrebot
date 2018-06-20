@@ -219,17 +219,11 @@ def bienvenida(bot, update):
 
             msg = bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
 
-            # Queue for deletion
-            JQ.run_once(deleteMsg, 30, context=[chat_id, msg.message_id])
-
     else:
         for newMember in update.message.new_chat_members:
             saludo = chatData["generic"]["saludo"] + newMember.first_name + ". " + chatData["generic"]["bienvenida"]
 
             msg = bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
-
-            # Queue for deletion
-            JQ.run_once(deleteMsg, 30, context=[chat_id, msg.message_id])
 
 
 def bienvenidaTest(bot, update):
