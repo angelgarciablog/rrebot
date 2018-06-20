@@ -138,7 +138,7 @@ def parsing(bot, update):
         for key in msgEnts:
             if key.type == "hashtag":
                 if msgEnts[key] == "#tasa":
-                    mostrarTasa(bot, chat_id)
+                    mostrarTasa(bot, chat_id, msgId)
                 if msgEnts[key] in chatData[str(chat_id)].keys():
                     msg = bot.send_message(chat_id=update.message.chat_id, text="Recuperando perfil de " + msgEnts[key], disable_notification=True)
 
@@ -449,12 +449,9 @@ def tasa(bot, update):
     JQ.run_once(deleteMsg, 10, context=[chat_id, msg.message_id])
     JQ.run_once(deleteMsg, 10, context=[chat_id, msgId])
 
-def mostrarTasa(bot, chat_id):
+def mostrarTasa(bot, chat_id, msgId):
     global tasa
     global isPhoto
-
-    chat_id = update.message.chat_id
-    msgId = update.message.message_id
 
     if isPhoto:
         msg = bot.send_photo(chat_id=chat_id, photo=tasa)
