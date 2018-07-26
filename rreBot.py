@@ -162,10 +162,10 @@ def parsing(bot, update):
         pass
 
 
-def perfil(bot, update):
+def perfil(bot, update, args):
     global chatData
 
-    ents = update.message.parse_entities()
+    username = args[0]
     chat_id = str(update.message.chat_id)
     msgId = update.message.message_id
 
@@ -173,20 +173,17 @@ def perfil(bot, update):
     if chat_id in chatData.keys():
         #If there's one:
         if update.message.from_user.username in chatData[str(chat_id)]["admins"]:
-            for key in ents:
-                if key.type == "hashtag":
+            try:
+                chatData[str(chat_id)][username] = update.message.reply_to_message.text
+                msg = bot.send_message(chat_id=update.message.chat_id, text="El perfil de " + username + " se ha guardado.", disable_notification=True)
 
-                    try:
-                        chatData[str(chat_id)]["#" + ents[key][1:]] = update.message.text[(key.length + 9):]
-                        msg = bot.send_message(chat_id=update.message.chat_id, text="El perfil de " + ents[key][1:] + " se ha guardado.", disable_notification=True)
+                # Queue for deletion
+                JQ.run_once(deleteMsg, 30, context=[chat_id, msg.message_id])
+            except:
+                msg = bot.send_message(chat_id=update.message.chat_id, text="Hubo un error al guardar el perfil de " + username + ".", disable_notification=True)
 
-                        # Queue for deletion
-                        JQ.run_once(deleteMsg, 30, context=[chat_id, msg.message_id])
-                    except:
-                        msg = bot.send_message(chat_id=update.message.chat_id, text="Hubo un error al guardar el perfil de " + ents[key][1:] + ".", disable_notification=True)
-
-                        # Queue for deletion
-                        JQ.run_once(deleteMsg, 30, context=[chat_id, msg.message_id])
+                # Queue for deletion
+                JQ.run_once(deleteMsg, 30, context=[chat_id, msg.message_id])
 
         else:
             msg = bot.send_message(chat_id=update.message.chat_id, text=("Sólo los usuarios habilitados pueden agregar perfiles.").decode("utf-8"), disable_notification=True)
@@ -207,6 +204,29 @@ def perfil(bot, update):
     JQ.run_once(deleteMsg, 90, context=[chat_id, msgId])
 
 
+def mostrarPerfil(bot, update, args):
+    global chatData
+
+    chat_id = update.message.chat_id
+    username = args[0]
+
+    if username in chatData[str(chat_id)].keys():
+        msg = bot.send_message(chat_id=update.message.chat_id, text="Recuperando perfil de *" + username + "*.", parse_mode="Markdown")
+
+        # Queue for deletion
+        JQ.run_once(deleteMsg, 60, context=[chat_id, msg.message_id])
+
+        msg = bot.send_message(chat_id=update.message.chat_id, text=chatData[str(chat_id)][username], disable_notification=True)
+
+        # Queue for deletion
+        JQ.run_once(deleteMsg, 60, context=[chat_id, msg.message_id])
+
+    else:
+        msg = bot.send_message(chat_id=update.message.chat_id, text="No existe un perfil con ese nombre.", parse_mode="Markdown")
+
+        # Queue for deletion
+        JQ.run_once(deleteMsg, 5, context=[chat_id, msg.message_id])
+
 def bienvenida(bot, update):
     #name = update.message.new_chat_members[0].first_name
     chat_id = str(update.message.chat_id)
@@ -223,7 +243,7 @@ def bienvenida(bot, update):
         for newMember in update.message.new_chat_members:
             saludo = chatData["generic"]["saludo"] + newMember.first_name + ". " + chatData["generic"]["bienvenida"]
 
-            msg = bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
+            bot.send_message(chat_id=update.message.chat_id, text=saludo, disable_notification=True)
 
 
 def bienvenidaTest(bot, update):
@@ -424,7 +444,7 @@ def cotizacion(bot, update, args):
     JQ.run_once(deleteMsg, 20, context=[chat_id, msgId])
 
 
-def tasa(bot, update):
+def guardarTasa(bot, update):
     global tasa
     global isPhoto
 
@@ -444,20 +464,29 @@ def tasa(bot, update):
     JQ.run_once(deleteMsg, 10, context=[chat_id, msg.message_id])
     JQ.run_once(deleteMsg, 10, context=[chat_id, msgId])
 
-def mostrarTasa(bot, chat_id, msgId):
+def mostrarTasa(bot, update):
     global tasa
     global isPhoto
 
-    if isPhoto:
-        msg = bot.send_photo(chat_id=chat_id, photo=tasa)
+    chat_id = update.message.chat_id
+    msgId = update.message.message_id
+
+    if tasa == None:
+        msg = bot.send_message(chat_id=chat_id, text="No hay una tasa guardada. Para guardar una responde a un mensaje con la tasa usando el comando /guardar.")
 
         # Queue for deletion
         JQ.run_once(deleteMsg, 20, context=[chat_id, msg.message_id])
     else:
-        msg = bot.send_message(chat_id=chat_id, text=tasa)
+        if isPhoto:
+            msg = bot.send_photo(chat_id=chat_id, photo=tasa)
 
-        # Queue for deletion
-        JQ.run_once(deleteMsg, 20, context=[chat_id, msg.message_id])
+            # Queue for deletion
+            JQ.run_once(deleteMsg, 20, context=[chat_id, msg.message_id])
+        else:
+            msg = bot.send_message(chat_id=chat_id, text=tasa)
+
+            # Queue for deletion
+            JQ.run_once(deleteMsg, 20, context=[chat_id, msg.message_id])
 
     # Queue for deletion
     JQ.run_once(deleteMsg, 5, context=[chat_id, msgId])
@@ -467,8 +496,27 @@ def deleteMsg(bot,job):
     bot.delete_message(chat_id=job.context[0], message_id=job.context[1])
 
 
+def ayuda(bot, update):
+
+    chat_id = update.message.chat_id
+    msgId = update.message.message_id
+
+    msg = bot.send_message(chat_id=chat_id, text="""
+*Comandos disponibles para Cotufo:*
+
+• /ayuda - Muestra este mensaje de ayuda.
+• /guardar - _En respuesta a un mensaje_. Guarda la tasa de AirTM del chat.
+• /tasa - Muestra la tasa guardada _si existe alguna en memoria_.
+• /actualizar - + _"tasas"_ - Actualiza las cotizaciones de *BTC*, *USD* y *EUR* desde la red.
+• /cotizacion - + _"usd/eur/btc/sinFiltro"_ - Muestra la cotización según el filtro utilizado, o muestra USD-EUR de DolarToday si no se especifica.
+• /calc - + _números y operadores aritméticos_. Calculadora básica.
+• /guardarPerfil - + _perfil del usuario_. *En respuesta a un mensaje*. Guarda un perfil personal (Solo admins).
+• /perfil - + _"nombre del perfil"_. Recupera un perfil guardado con ese nombre, si existe.
+                                                    """, parse_mode="Markdown")
+
+    JQ.run_once(deleteMsg, 30, context=[chat_id, msg.message_id])
+
 #Passing handlers to the dispatcher
-DIS.add_handler(CMD("perfil", perfil))
 DIS.add_handler(CMD("bienvenida", cambiarTextoDeBienvenida, pass_args=True))
 DIS.add_handler(CMD("bienvenidaTest", bienvenidaTest))
 DIS.add_handler(CMD("calc", calc))
@@ -477,7 +525,11 @@ DIS.add_handler(CMD("setup", setup))
 DIS.add_handler(CMD("reset", reset))
 DIS.add_handler(CMD("actualizar", actualizarTasas, pass_args=True))
 DIS.add_handler(CMD("cotizacion", cotizacion, pass_args=True))
-DIS.add_handler(CMD("tasa", tasa))
+DIS.add_handler(CMD("perfil", mostrarPerfil, pass_args=True))
+DIS.add_handler(CMD("guardarPerfil", perfil, pass_args=True))
+DIS.add_handler(CMD("tasa", mostrarTasa))
+DIS.add_handler(CMD("guardar", guardarTasa))
+DIS.add_handler(CMD("ayuda", ayuda))
 
 DIS.add_handler(MSG(Filters.status_update.new_chat_members, bienvenida))
 DIS.add_handler(MSG(Filters.all, parsing))
